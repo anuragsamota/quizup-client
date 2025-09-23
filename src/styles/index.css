@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@plugin "daisyui"{
+  themes : forest --default;
+}
+
+
+
+:root {
+  color-scheme: dark;
+  @apply bg-[var(--background)];
+}
+
+::-webkit-scrollbar {
+  background-color: var(--background);
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary);
+  border-radius: 8px;
+}
+
+/* For Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--color-accent)) hsl(var(--background));
+}
