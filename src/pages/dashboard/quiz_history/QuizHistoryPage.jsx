@@ -1,19 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
+import { fetchUserHistory, fetchOrganizedQuizzes } from '../../../utils/userApi';
 
 function QuizHistoryPage() {
-  // Example data (replace with real data from backend or context)
-  const attemptedQuizzes = [
-    { id: 1, title: 'General Knowledge', score: 8, total: 10, date: '2025-09-01' },
-    { id: 2, title: 'Science Basics', score: 6, total: 10, date: '2025-08-20' },
-    { id: 3, title: 'History', score: 7, total: 10, date: '2025-08-10' },
-    { id: 4, title: 'Geography', score: 9, total: 10, date: '2025-07-30' },
-  ];
-  const organizedQuizzes = [
-    { id: 1, title: 'React Mastery', participants: 12, date: '2025-09-10' },
-    { id: 2, title: 'Math Quiz', participants: 8, date: '2025-08-15' },
-    { id: 3, title: 'Science Bowl', participants: 15, date: '2025-07-25' },
-    { id: 4, title: 'History Challenge', participants: 10, date: '2025-07-05' },
-  ];
+  const navigate = useNavigate();
+  const { token } = useAuth();
+  const [attemptedQuizzes, setAttemptedQuizzes] = useState([]);
+  const [organizedQuizzes, setOrganizedQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+  const [orgError, setOrgError] = useState(null);
+
+  useEffect(() => {
+    async function loadHistory() {
+      if (!token) return;
+      setLoading(true);
+      try {
+        const data = await fetchUserHistory(token);
+        setAttemptedQuizzes(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      }
+      setLoading(false);
+    }
+    loadHistory();
+  }, [token]);
+
+  useEffect(() => {
+    async function loadOrganized() {
+      if (!token) return;
+      setOrgLoading(true);
+      try {
+        const data = await fetchOrganizedQuizzes(token);
+        setOrganizedQuizzes(data);
+        setOrgError(null);
+      } catch (err) {
+        setOrgError(err.message);
+      }
+      setOrgLoading(false);
+    }
+    loadOrganized();
+  }, [token]);
+
   return (
     <div className="py-8 px-2 w-full">
       <h1 className="text-2xl font-bold mb-6">Quiz History</h1>
@@ -21,50 +52,74 @@ function QuizHistoryPage() {
         {/* Attempted Quizzes */}
         <div>
           <h2 className="text-xl font-semibold mb-2">Attempted Quizzes</h2>
-          <div className="overflow-x-auto">
-            <table className="table table-zebra w-full">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Score</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attemptedQuizzes.map(q => (
-                  <tr key={q.id}>
-                    <td>{q.title}</td>
-                    <td>{q.score} / {q.total}</td>
-                    <td>{q.date}</td>
+          {loading ? (
+            <div className="text-base-content/70">Loading...</div>
+          ) : error ? (
+            <div className="text-error">{error}</div>
+          ) : attemptedQuizzes.length === 0 ? (
+            <div className="text-base-content/70">No quiz attempts yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Score</th>
+                    <th>Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {attemptedQuizzes.map((q, i) => (
+                    <tr
+                      key={q._id || i}
+                      className="cursor-pointer hover:bg-primary/10"
+                      onClick={() => navigate(`/dashboard/quiz-history/attempted/${q.quizId?._id || q.quizId || ''}`)}
+                    >
+                      <td className="text-primary underline">{q.quizId?.title || q.quizId || 'Quiz'}</td>
+                      <td>{q.score}</td>
+                      <td>{q.takenAt ? new Date(q.takenAt).toLocaleDateString() : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
         {/* Organized Quizzes */}
         <div>
           <h2 className="text-xl font-semibold mb-2">Organized Quizzes</h2>
-          <div className="overflow-x-auto">
-            <table className="table table-zebra w-full">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Participants</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizedQuizzes.map(q => (
-                  <tr key={q.id}>
-                    <td>{q.title}</td>
-                    <td>{q.participants}</td>
-                    <td>{q.date}</td>
+          {orgLoading ? (
+            <div className="text-base-content/70">Loading...</div>
+          ) : orgError ? (
+            <div className="text-error">{orgError}</div>
+          ) : organizedQuizzes.length === 0 ? (
+            <div className="text-base-content/70">No organized quizzes yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Participants</th>
+                    <th>Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {organizedQuizzes.map((q, i) => (
+                    <tr
+                      key={q._id || i}
+                      className="cursor-pointer hover:bg-primary/10"
+                      onClick={() => navigate(`/dashboard/quiz-history/organized/${q._id || q.id || ''}`)}
+                    >
+                      <td className="text-primary underline">{q.title}</td>
+                      <td>{q.participants ?? '-'}</td>
+                      <td>{q.createdAt ? new Date(q.createdAt).toLocaleDateString() : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

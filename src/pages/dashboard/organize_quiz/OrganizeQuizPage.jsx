@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { createQuiz, createQuestion, updateQuestion, deleteQuestion, updateQuiz } from '../../../utils/quizManageApi';
+import { useMessage } from '../../../contexts/MessageContext';
 
 function OrganizeQuizPage() {
+  const { showMessage } = useMessage();
+  // Each question: { id?, question, type, answers, correct }
   const [questions, setQuestions] = useState([
     { question: '', type: 'MCQ', answers: ['', ''], correct: [0] }
   ]);
+  const [quizId, setQuizId] = useState(null); // Track quizId after creation
+  const [quizTitle, setQuizTitle] = useState('');
+  const [deletedQuestionIds, setDeletedQuestionIds] = useState([]); // Track deleted question ids for backend
   const [quizLink, setQuizLink] = useState('');
   const [quizStarted, setQuizStarted] = useState(false);
   const [joinedUsers, setJoinedUsers] = useState([
@@ -54,10 +61,29 @@ function OrganizeQuizPage() {
     updated[qIdx].correct = [value];
     setQuestions(updated);
   };
-  const addQuestion = () => {
-    setQuestions([...questions, { question: '', type: 'MCQ', answers: ['', ''], correct: [0] }]);
+  const addQuestion = async () => {
+    const newQ = { question: '', type: 'MCQ', answers: ['', ''], correct: [0] };
+    if (quizId) {
+      try {
+        // Only send required fields for MCQ
+        const payload = {
+          type: 'mcq',
+          question: '',
+          options: ['', ''],
+          answer: '' // backend may require empty string for MCQ
+        };
+        const res = await createQuestion(quizId, payload);
+        setQuestions([...questions, { ...newQ, id: res.id || res._id || res.questionId }]);
+      } catch (err) {
+        showMessage('Failed to add question: ' + err.message, 'error');
+      }
+    } else {
+      setQuestions([...questions, newQ]);
+    }
   };
   const removeQuestion = (idx) => {
+    const q = questions[idx];
+    if (q.id) setDeletedQuestionIds(ids => [...ids, q.id]);
     setQuestions(questions.filter((_, i) => i !== idx));
   };
   const addAnswer = (qIdx) => {
@@ -74,12 +100,67 @@ function OrganizeQuizPage() {
     }
     setQuestions(updated);
   };
-  const saveQuiz = () => {
-    // Simulate save
-    alert('Quiz saved!');
+  // Save quiz and sync all questions with backend
+  const saveQuiz = async () => {
+    try {
+      let qid = quizId;
+      // 1. Create quiz if not exists
+      if (!qid) {
+        const quizRes = await createQuiz({ title: quizTitle || 'Untitled Quiz', questions: [] });
+        qid = quizRes.id || quizRes._id || quizRes.quizId;
+        if (!qid) throw new Error('Quiz creation failed: No quiz ID returned');
+        setQuizId(qid);
+      } else {
+        // Update quiz title if changed
+        await updateQuiz(qid, { title: quizTitle || 'Untitled Quiz' });
+      }
+      if (!qid) throw new Error('Quiz ID is undefined. Cannot save questions.');
+      // 2. Delete removed questions in backend
+      for (const dqid of deletedQuestionIds) {
+        await deleteQuestion(qid, dqid);
+      }
+      setDeletedQuestionIds([]);
+      // 3. Create/update questions
+      const updatedQuestions = [];
+      for (const q of questions) {
+        let payload = {
+          type: q.type.toLowerCase(),
+          question: q.question
+        };
+        if (q.type === 'MCQ') {
+          payload.options = q.answers;
+          payload.answer = q.answers[q.correct[0]] || '';
+        } else if (q.type === 'MSQ') {
+          payload.options = q.answers;
+          payload.answer = q.correct.map(idx => q.answers[idx]);
+        } else if (q.type === 'Text') {
+          payload.answer = q.correct[0] || '';
+        }
+        if (q.id) {
+          // Update existing
+          const res = await updateQuestion(qid, q.id, payload);
+          updatedQuestions.push({ ...q, id: res.id || res._id || res.questionId });
+        } else {
+          // Create new
+          const res = await createQuestion(qid, payload);
+          updatedQuestions.push({ ...q, id: res.id || res._id || res.questionId });
+        }
+      }
+      setQuestions(updatedQuestions);
+      setQuizId(qid); // Ensure quizId is set after save
+      setQuizLink(`${window.location.origin}/quiz/${qid}`);
+      showMessage('Quiz and questions saved successfully!', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
   };
+  // Generate quiz link by id
   const generateLink = () => {
-    setQuizLink('https://quizup.com/quiz/12345');
+    if (quizId) {
+      setQuizLink(`${window.location.origin}/quiz/${quizId}`);
+    } else {
+      showMessage('Save the quiz first to generate a link.', 'info');
+    }
   };
   const startQuiz = () => {
     setQuizStarted(true);
@@ -88,6 +169,15 @@ function OrganizeQuizPage() {
   return (
     <div className="min-h-screen bg-base-100 flex flex-col items-center py-8 px-2">
       <h1 className="text-2xl font-bold mb-4">Organize & Manage Quiz</h1>
+      {/* Quiz title input */}
+      <div className="mb-4">
+        <input
+          className="input input-bordered w-full max-w-xl"
+          placeholder="Quiz Title"
+          value={quizTitle}
+          onChange={e => setQuizTitle(e.target.value)}
+        />
+      </div>
       <div className="w-full max-w-3xl flex flex-col gap-6">
         {questions.map((q, qIdx) => (
           <div className="card bg-base-200 shadow-md" key={qIdx}>
@@ -161,7 +251,9 @@ function OrganizeQuizPage() {
         <button className="btn btn-primary" onClick={addQuestion}>Add Question</button>
         <div className="flex flex-wrap gap-4 mt-4">
           <button className="btn btn-success" onClick={saveQuiz}>Save Quiz</button>
-          <button className="btn btn-info" onClick={generateLink}>Generate Quiz Link</button>
+    <button className="btn btn-info" onClick={generateLink}>Generate Quiz Link</button>
+    {/* Placeholder for quiz list/selection UI */}
+    {/* <button className="btn btn-outline" onClick={loadQuizList}>Load Existing Quizzes</button> */}
           <button className="btn btn-accent" onClick={startQuiz}>Start Quiz</button>
         </div>
         {quizLink && (

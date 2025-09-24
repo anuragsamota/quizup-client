@@ -1,20 +1,53 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { updateUserProfile, deleteUserAccount, fetchUserProfile } from '../../../utils/userApi';
+import { useNavigate } from 'react-router-dom';
+import { useMessage } from '../../../contexts/MessageContext';
 
 function SettingsPage() {
+  const { token, logout } = useAuth();
+  const { showMessage } = useMessage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Placeholder handlers
-  const handleSave = (e) => {
+  useEffect(() => {
+    async function loadProfile() {
+      if (!token) return;
+      try {
+        const data = await fetchUserProfile(token);
+        setName(data.name || '');
+        setEmail(data.email || '');
+      } catch (err) {
+        showMessage('Failed to load profile', 'error');
+      }
+    }
+    loadProfile();
+    // eslint-disable-next-line
+  }, [token]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    // TODO: Implement save logic
+    setLoading(true);
+    try {
+      await updateUserProfile(token, { name, email });
+      showMessage('Profile updated successfully!', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+    setLoading(false);
   };
 
-  const handleDelete = () => {
-    // TODO: Implement delete logic
-    setShowDeleteModal(false);
+  const handleDelete = async () => {
+    try {
+      await deleteUserAccount(token);
+      logout();
+      showMessage('Account deleted successfully.', 'success');
+      navigate('/');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
   };
 
   return (
@@ -50,7 +83,7 @@ function SettingsPage() {
             required
           />
         </div>
-        <button type="submit" className="btn btn-primary w-full">Save Changes</button>
+        <button type="submit" className="btn btn-primary w-full" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
       </form>
 
       {/* Delete Account Section */}
@@ -59,25 +92,12 @@ function SettingsPage() {
         <p className="mb-4 text-base-content/70">This action is irreversible. All your data will be permanently deleted.</p>
         <button
           className="btn btn-error btn-outline w-full"
-          onClick={() => setShowDeleteModal(true)}
+          type="button"
+          onClick={handleDelete}
         >
           Delete Account
         </button>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="modal-box bg-base-100">
-            <h3 className="font-bold text-lg text-error mb-2">Confirm Account Deletion</h3>
-            <p className="mb-4">Are you sure you want to delete your account? This cannot be undone.</p>
-            <div className="flex justify-end gap-2">
-              <button className="btn btn-ghost" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-              <button className="btn btn-error" onClick={handleDelete}>Yes, Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
