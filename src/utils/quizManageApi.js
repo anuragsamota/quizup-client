@@ -3,8 +3,19 @@ import axios from "axios";
 
 export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE || "http://localhost:8080";
 
-export async function createQuiz({ title, questions }) {
-  const res = await axios.post(`${QUIZ_MANAGE_API_BASE}/api/quiz/`, { title, description: '', questions: questions || [] });
+export async function createQuiz({ title, questions, organizer }) {
+  const payload = { 
+    title, 
+    description: '', 
+    questions: questions || [] 
+  };
+  
+  // Add organizer if provided
+  if (organizer) {
+    payload.organizer = organizer;
+  }
+  
+  const res = await axios.post(`${QUIZ_MANAGE_API_BASE}/api/quiz/`, payload);
   return res.data;
 }
 
@@ -15,6 +26,11 @@ export async function getAllQuizzes() {
 
 export async function getQuizById(quizId) {
   const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}`);
+  return res.data;
+}
+
+export async function getQuizzesByOrganizer(username) {
+  const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/organizer/${username}`);
   return res.data;
 }
 

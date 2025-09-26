@@ -3,8 +3,6 @@ import axios from "axios";
 
 const BASE = import.meta.env.VITE_QUIZ_RUNTIME_API_BASE || "http://localhost:5642";
 
-const API_BASE = `${BASE}/api`;
-
 // Create a runtime session (teacher starts quiz)
 export async function createSession(sessionId, quizId) {
   const res = await axios.post(`${BASE}/api/session`, { sessionId, quizId });
@@ -36,9 +34,8 @@ export async function getSession(sessionId) {
 }
 
 // Get results (teacher view)
-
 export async function getResults(sessionId) {
-  const res = await axios.get(`${API_BASE}/session/${sessionId}/results`);
+  const res = await axios.get(`${BASE}/api/session/${sessionId}/results`);
   return res.data;
 }
 

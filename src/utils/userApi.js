@@ -3,7 +3,7 @@ import axios from "axios";
 // src/utils/userApi.js
 // Utility functions for user profile and user data
 
-const USER_API_BASE = "https://quizup-user-manage-service.vercel.app";
+const USER_API_BASE = import.meta.env.USER_API || "http://localhost:8080";
 
 export async function fetchUserProfile(token) {
   try {

@@ -13,6 +13,7 @@ import AuthPage from "./pages/auth/AuthPage";
 import QuizPage from "./pages/quiz/QuizPage";
 import SettingsPage from "./pages/dashboard/settings/SettingsPage";
 import OrganizeQuizPage from "./pages/dashboard/organize_quiz/OrganizeQuizPage";
+import ManageQuizPage from "./pages/dashboard/organize_quiz/ManageQuizPage";
 import LeaderboardPage from "./pages/leaderboard/LeaderboardPage";
 import QuizHistoryPage from "./pages/dashboard/quiz_history/QuizHistoryPage";
 import AttemptedQuizDetailsPage from "./pages/dashboard/quiz_history/AttemptedQuizDetailsPage";
@@ -58,6 +59,7 @@ function AppRoutes() {
                       <Route path="quiz-history/attempted/:quizid" element={<AttemptedQuizDetailsPage />} />
                       <Route path="quiz-history/organized/:quizid" element={<OrganizedQuizDetailsPage />} />
                       <Route path="organize-quiz" element={<OrganizeQuizPage />} />
+                      <Route path="organize-quiz/:quizId" element={<ManageQuizPage />} />
                       <Route path="settings" element={<SettingsPage />} />
                     </Route>
                   </Routes>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { loginUser, registerUser, storeToken, getToken, removeToken } from "../utils/authApi";
+import { fetchUserProfile } from "../utils/userApi";
 
 const AuthContext = createContext();
 
@@ -31,6 +32,21 @@ export function AuthProvider({ children }) {
       const res = await loginUser({ username, password });
       storeToken(res.token);
       setToken(res.token);
+      
+      // Fetch user profile after successful login
+      try {
+        const userProfile = await fetchUserProfile(res.token);
+        setUser(userProfile);
+        localStorage.setItem("quizup_user", JSON.stringify(userProfile));
+      } catch (profileError) {
+        console.warn("Failed to fetch user profile:", profileError.message);
+        // Still consider login successful even if profile fetch fails
+        setUser(res.user || null);
+        if (res.user) {
+          localStorage.setItem("quizup_user", JSON.stringify(res.user));
+        }
+      }
+      
       setLoading(false);
       return { success: true };
     } catch (err) {

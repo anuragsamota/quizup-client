@@ -1,35 +1,42 @@
 // src/utils/authApi.js
 // Utility functions for user authentication API
 
-const API_BASE = "https://quizup-user-manage-service.vercel.app";
+import axios from "axios";
+
+const API_BASE = import.meta.env.USER_API || "http://localhost:8080";
 
 export async function loginUser({ username, password }) {
-  console.log(username, password);
-  const res = await fetch(`${API_BASE}/api/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*", // Add this line
-        "Accept": "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-    mode: "cors",
-  });
-  console.log(res);
-  if (!res.ok) throw new Error((await res.json()).message || "Login failed");
-  return res.json(); // should return { token, user }
+  try {
+    const res = await axios.post(`${API_BASE}/api/login`, {
+      username,
+      password
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+      }
+    });
+    return res.data; // should return { token, user }
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Login failed");
+  }
 }
 
-export async function registerUser({username, name, email, password }) {
-  const res = await fetch(`${API_BASE}/api/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, name, email, password }),
-    mode: "cors",
-  });
-  if (!res.ok)
-    throw new Error((await res.json()).message || "Registration failed");
-  return res.json(); // should return { token, user }
+export async function registerUser({ username, name, email, password }) {
+  try {
+    const res = await axios.post(`${API_BASE}/api/register`, {
+      username,
+      name,
+      email,
+      password
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+      }
+    });
+    return res.data; // should return { token, user }
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Registration failed");
+  }
 }
 
 export function storeToken(token) {
@@ -42,4 +49,22 @@ export function getToken() {
 
 export function removeToken() {
   localStorage.removeItem("quizup_jwt");
+}
+
+export function storeUser(user) {
+  localStorage.setItem("quizup_user", JSON.stringify(user));
+}
+
+export function getUser() {
+  const stored = localStorage.getItem("quizup_user");
+  if (!stored || stored === "undefined") return null;
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return null;
+  }
+}
+
+export function removeUser() {
+  localStorage.removeItem("quizup_user");
 }

@@ -2,28 +2,25 @@ import Sidebar from './components/Sidebar';
 import { Outlet, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchUserProfile, fetchUserHistory, fetchOrganizedQuizzes } from '../../utils/userApi';
+import { fetchUserHistory, fetchOrganizedQuizzes } from '../../utils/userApi';
 
 
 function DashboardHome() {
   const { user, token } = useAuth();
-  const [profile, setProfile] = useState(null);
   const [history, setHistory] = useState([]);
   const [organized, setOrganized] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function loadAll() {
-      if (!token) return;
+    async function loadData() {
+      if (!token || !user) return;
       setLoading(true);
       try {
-        const [profileData, historyData, organizedData] = await Promise.all([
-          fetchUserProfile(token),
+        const [historyData, organizedData] = await Promise.all([
           fetchUserHistory(token),
           fetchOrganizedQuizzes(token)
         ]);
-        setProfile(profileData);
         setHistory(historyData);
         setOrganized(organizedData);
         setError(null);
@@ -32,12 +29,12 @@ function DashboardHome() {
       }
       setLoading(false);
     }
-    loadAll();
+    loadData();
   }, [user, token]);
 
   if (loading) return <div className="flex justify-center items-center h-40">Loading dashboard...</div>;
   if (error) return <div className="text-error">{error}</div>;
-  if (!profile) return null;
+  if (!user) return <div className="flex justify-center items-center h-40">No user data available...</div>;
 
   // Show up to 2 most recent attempted quizzes
   const recentAttempted = (history || []).slice(-2).reverse();
@@ -48,18 +45,18 @@ function DashboardHome() {
     <div className="flex flex-col items-center py-8 px-2 w-full">
       <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
       <p className="mb-2 text-base-content/70">Welcome to your dashboard.</p>
-      <p className="mb-6 text-base-content">Hello, <span className="font-semibold">{profile.name || profile.username}</span>! Hope you're having a great day.</p>
+      <p className="mb-6 text-base-content">Hello, <span className="font-semibold">{user.name || user.username}</span>! Hope you're having a great day.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
         {/* Profile Card */}
         <div className="card bg-base-200 shadow-xl md:col-span-1">
           <div className="card-body">
             <h2 className="card-title mb-2">Profile</h2>
             <div className="flex flex-col gap-2">
-              <div><span className="font-semibold">Name:</span> {profile.name}</div>
-              <div><span className="font-semibold">Username:</span> {profile.username}</div>
-              <div><span className="font-semibold">Email:</span> {profile.email}</div>
-              {profile.avatar && (
-                <img src={profile.avatar} alt="avatar" className="w-16 h-16 rounded-full mt-2" />
+              <div><span className="font-semibold">Name:</span> {user.name}</div>
+              <div><span className="font-semibold">Username:</span> {user.username}</div>
+              <div><span className="font-semibold">Email:</span> {user.email}</div>
+              {user.avatar && (
+                <img src={user.avatar} alt="avatar" className="w-16 h-16 rounded-full mt-2" />
               )}
             </div>
             <Link to="/dashboard/settings" className="btn btn-outline btn-primary mt-4 w-full">Edit Profile</Link>
