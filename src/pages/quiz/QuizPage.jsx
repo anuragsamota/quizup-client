@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSession, joinSession, submitAnswer } from '../../utils/quizRuntimeApi';
-import { getQuizById } from '../../utils/quizManageApi';
+import { getQuizById, getAllQuestions } from '../../utils/quizManageApi';
 import { useMessage } from '../../contexts/MessageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
 function QuizPage() {
@@ -15,10 +16,9 @@ function QuizPage() {
   const [joined, setJoined] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
-  const [name, setName] = useState('');
-  const [roll, setRoll] = useState('');
   const { quizid } = useParams();
   const { showMessage } = useMessage();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,14 +40,32 @@ function QuizPage() {
         setSession(sessionData);
         console.log('Session loaded:', sessionData);
         
-        // Step 2: Fetch complete quiz data from quiz management API
-        console.log('Fetching quiz data for quiz ID:', sessionData.quizId);
-        const quizData = await getQuizById(sessionData.quizId);
-        console.log('Quiz data response:', quizData);
+        // Step 2: Fetch quiz metadata and questions separately
+        console.log('Fetching quiz metadata for quiz ID:', sessionData.quizId);
+        const [quizData, questionsData] = await Promise.all([
+          getQuizById(sessionData.quizId),
+          getAllQuestions(sessionData.quizId)
+        ]);
         
-        if (quizData && quizData.questions) {
+        console.log('Quiz metadata response:', quizData);
+        console.log('Questions data response:', questionsData);
+        console.log('Raw questions data structure:', questionsData); // Debug log
+        
+        // Handle different response structures for questions
+        let questionsArray = [];
+        if (Array.isArray(questionsData)) {
+          questionsArray = questionsData;
+        } else if (questionsData && Array.isArray(questionsData.questions)) {
+          questionsArray = questionsData.questions;
+        } else if (questionsData && questionsData.data && Array.isArray(questionsData.data)) {
+          questionsArray = questionsData.data;
+        }
+        
+        console.log('Processed questions array:', questionsArray); // Debug log
+        
+        if (questionsArray.length > 0) {
           // Map questions from backend format to frontend format
-          const mappedQuestions = quizData.questions.map(q => ({
+          const mappedQuestions = questionsArray.map(q => ({
             _id: q._id || q.id,
             text: q.text || q.question || '',
             type: q.type ? q.type.toLowerCase() : 'mcq',
@@ -65,8 +83,8 @@ function QuizPage() {
           
           console.log('Quiz loaded with questions:', mappedQuestions);
         } else {
-          console.error('No quiz data or questions found');
-          showMessage('Quiz data not found', 'error');
+          console.error('No questions found or invalid format, questionsArray:', questionsArray);
+          showMessage('No questions found for this quiz', 'error');
         }
         
       } catch (err) {
@@ -127,8 +145,8 @@ function QuizPage() {
   const handleTextChange = (qid, value) => setAnswers(prev => ({ ...prev, [qid]: value }));
 
   const handleJoin = async () => {
-    if (!name.trim() || !roll.trim()) {
-      showMessage('Please enter both name and roll number', 'error');
+    if (!user) {
+      showMessage('Authentication required', 'error');
       return;
     }
     
@@ -136,8 +154,12 @@ function QuizPage() {
     setLoading(true);
     
     try {
-      console.log('Joining session:', { sessionId: quizid, userId: uid, name, roll });
-      await joinSession(quizid, uid, name, roll);
+      // Use authenticated user's data
+      const userName = user.name || user.username || 'Unknown User';
+      const userRoll = user.roll || user.id || user._id || uid;
+      
+      console.log('Joining session:', { sessionId: quizid, userId: uid, name: userName, roll: userRoll });
+      await joinSession(quizid, uid, userName, userRoll);
       setUserId(uid);
       setJoined(true);
       showMessage('Successfully joined the quiz!', 'success');
@@ -210,38 +232,20 @@ function QuizPage() {
         <h1 className="text-3xl font-bold text-center mb-2">{quiz.title}</h1>
         <p className="text-center text-base-content/70 mb-6">Session ID: {quizid}</p>
 
-        {!joined && (
+        {!joined && user && (
           <div className="card bg-base-200 shadow-xl max-w-md mx-auto mb-8">
             <div className="card-body">
               <h2 className="card-title justify-center mb-4">Join Quiz</h2>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Your Name</span>
-                </label>
-                <input 
-                  className="input input-bordered" 
-                  placeholder="Enter your full name" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Roll Number</span>
-                </label>
-                <input 
-                  className="input input-bordered" 
-                  placeholder="Enter your roll number" 
-                  value={roll} 
-                  onChange={e => setRoll(e.target.value)}
-                  disabled={loading}
-                />
+              <div className="text-center mb-4">
+                <div className="text-lg font-semibold">Welcome, {user.name || user.username}!</div>
+                <div className="text-sm text-base-content/70 mt-1">
+                  Ready to take the quiz?
+                </div>
               </div>
               <button 
-                className="btn btn-primary mt-4" 
+                className="btn btn-primary" 
                 onClick={handleJoin}
-                disabled={loading || !name.trim() || !roll.trim()}
+                disabled={loading}
               >
                 {loading ? 'Joining...' : 'Join Quiz'}
               </button>
@@ -257,7 +261,7 @@ function QuizPage() {
                   Question {current + 1} of {quiz.questions.length}
                 </div>
                 <div className="text-sm text-base-content/70">
-                  Welcome, {name}!
+                  Welcome, {user?.name || user?.username || 'User'}!
                 </div>
               </div>
 

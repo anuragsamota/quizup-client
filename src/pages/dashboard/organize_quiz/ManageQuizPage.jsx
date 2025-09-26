@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createQuestion, updateQuestion, deleteQuestion, getQuizById } from '../../../utils/quizManageApi';
+import { createQuestion, updateQuestion, deleteQuestion, getQuizById, getAllQuestions } from '../../../utils/quizManageApi';
 import { createSession } from '../../../utils/quizRuntimeApi';
 import { useMessage } from '../../../contexts/MessageContext';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,11 +21,30 @@ function ManageQuizPage() {
     async function loadQuiz() {
       setLoading(true);
       try {
-        const data = await getQuizById(quizId);
-        setQuiz(data);
+        // Fetch quiz metadata and questions separately
+        const [quizData, questionsData] = await Promise.all([
+          getQuizById(quizId),
+          getAllQuestions(quizId)
+        ]);
+        
+        setQuiz(quizData);
+        console.log('Quiz metadata loaded:', quizData);
+        console.log('Raw questions data:', questionsData); // Debug log to see structure
+        
+        // Handle different response structures for questions
+        let questionsArray = [];
+        if (Array.isArray(questionsData)) {
+          questionsArray = questionsData;
+        } else if (questionsData && Array.isArray(questionsData.questions)) {
+          questionsArray = questionsData.questions;
+        } else if (questionsData && questionsData.data && Array.isArray(questionsData.data)) {
+          questionsArray = questionsData.data;
+        }
+        
+        console.log('Processed questions array:', questionsArray); // Debug log
         
         // Map backend question format to frontend format
-        const mappedQuestions = (data.questions || []).map(q => {
+        const mappedQuestions = questionsArray.map(q => {
           console.log('Backend question:', q); // Debug log
           console.log('Question text field:', q.text);
           console.log('Question question field:', q.question);
@@ -44,9 +63,9 @@ function ManageQuizPage() {
         
         setQuestions(mappedQuestions);
         console.log('Mapped questions:', mappedQuestions); // Debug log
-        setQuizLink(`${window.location.origin}/quiz/${quizId}`);
       } catch (err) {
-        showMessage('Failed to load quiz: ' + err.message, 'error');
+        console.error('Failed to load quiz or questions:', err);
+        showMessage('Failed to load quiz: ' + (err.response?.data?.message || err.message), 'error');
       }
       setLoading(false);
     }
@@ -437,30 +456,21 @@ function ManageQuizPage() {
         ))}
         <button className="btn btn-primary" onClick={addQuestion}>Add Question</button>
         
-        {/* Quiz Actions */}
-        <div className="card bg-base-200 shadow-md">
-          <div className="card-body">
-            <h3 className="card-title">Quiz Actions</h3>
-            <div className="flex flex-wrap gap-4">
-              <button 
-                className="btn btn-info" 
-                onClick={() => setQuizLink(`${window.location.origin}/quiz/${sessionId || quizId}`)}
-              >
-                Generate Quiz Link
-              </button>
-              {activeSession && (
+        {/* Quiz Link - Only shown when session is active */}
+        {activeSession && quizLink && (
+          <div className="card bg-base-200 shadow-md">
+            <div className="card-body">
+              <h3 className="card-title">Quiz Link</h3>
+              <div className="flex flex-wrap gap-4 mb-4">
                 <button 
                   className="btn btn-outline"
                   onClick={() => window.open(quizLink, '_blank')}
-                  disabled={!quizLink}
                 >
                   Open Quiz (Student View)
                 </button>
-              )}
-            </div>
-            
-            {quizLink && (
-              <div className="mt-4 p-4 bg-base-300 rounded-lg">
+              </div>
+              
+              <div className="p-4 bg-base-300 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold">Quiz Link:</span>
                   <button 
@@ -475,15 +485,13 @@ function ManageQuizPage() {
                     {quizLink}
                   </a>
                 </div>
-                {activeSession && (
-                  <div className="text-sm text-success mt-2">
-                    ✅ Students can now join using Session ID: <span className="font-mono font-bold">{sessionId}</span>
-                  </div>
-                )}
+                <div className="text-sm text-success mt-2">
+                  ✅ Students can now join using Session ID: <span className="font-mono font-bold">{sessionId}</span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

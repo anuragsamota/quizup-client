@@ -38,6 +38,16 @@ export async function createQuestion(quizId, payload) {
   return (await axios.post(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions`, payload)).data;
 }
 
+export async function getAllQuestions(quizId) {
+  const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions`);
+  return res.data;
+}
+
+export async function getQuestionById(quizId, questionId) {
+  const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${questionId}`);
+  return res.data;
+}
+
 export async function updateQuestion(quizId, qid, payload) {
   return (await axios.put(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${qid}`, payload)).data;
 }
