@@ -1,14 +1,22 @@
 import { useMessage } from "../../contexts/MessageContext";
+import { useNavigate } from "react-router-dom";
 
 
 function JoinQuizPage() {
   const { showMessage } = useMessage();
+  const navigate = useNavigate();
+  
 
   const handleJoinQuiz = (e) => {
     e.preventDefault();
     const quizCode = e.target.quizCode.value;
+    if (quizCode || quizCode !=="" || quizCode ===null || quizCode===undefined )  {
+      navigate(`/quiz/${quizCode}`);
+    }else{
+      showMessage("Please enter a valid quiz code", "error", 10000);
+    }
     // Logic to join the quiz using the quizCode
-    showMessage(`Joining quiz with code: ${quizCode}`, "success", 10000);
+    showMessage(`Joining quiz with code: ${quizCode}`, "success", 2000);
   };
 
   return (

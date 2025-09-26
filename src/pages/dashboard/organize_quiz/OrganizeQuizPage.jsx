@@ -248,7 +248,7 @@ function OrganizeQuizPage() {
             </div>
           </div>
         ))}
-        <button className="btn btn-primary" onClick={addQuestion}>Add Question</button>
+        <button className="btn btn-primary" onClick={() => addQuestion()}>Add Question</button>
         <div className="flex flex-wrap gap-4 mt-4">
           <button className="btn btn-success" onClick={saveQuiz}>Save Quiz</button>
     <button className="btn btn-info" onClick={generateLink}>Generate Quiz Link</button>
