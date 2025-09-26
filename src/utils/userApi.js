@@ -1,70 +1,76 @@
+
+import axios from "axios";
 // src/utils/userApi.js
 // Utility functions for user profile and user data
 
 const USER_API_BASE = "https://quizup-user-manage-service.vercel.app";
 
 export async function fetchUserProfile(token) {
-  const res = await fetch(`${USER_API_BASE}/api/profile`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch user profile");
-  return res.json();
+  try {
+    const res = await axios.get(`${USER_API_BASE}/api/profile`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to fetch user profile");
+  }
 }
 
 export async function fetchUserHistory(token) {
-  const res = await fetch(`${USER_API_BASE}/api/history`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch quiz history");
-  return res.json();
+  try {
+    const res = await axios.get(`${USER_API_BASE}/api/history`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to fetch quiz history");
+  }
 }
 
 export async function fetchOrganizedQuizzes(token) {
-  const res = await fetch(`${USER_API_BASE}/api/organized`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to fetch organized quizzes");
-  return res.json();
+  try {
+    const res = await axios.get(`${USER_API_BASE}/api/organized`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to fetch organized quizzes");
+  }
 }
 
 export async function updateUserProfile(token, { name, email }) {
-  const res = await fetch(`${USER_API_BASE}/api/profile`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify({ name, email }),
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to update profile");
-  return res.json();
+  try {
+    const res = await axios.put(`${USER_API_BASE}/api/profile`, { name, email }, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to update profile");
+  }
 }
 
 export async function deleteUserAccount(token) {
-  const res = await fetch(`${USER_API_BASE}/api/profile`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to delete account");
-  return res.json();
+  try {
+    const res = await axios.delete(`${USER_API_BASE}/api/profile`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to delete account");
+  }
 }

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { createQuiz, createQuestion, updateQuestion, deleteQuestion, updateQuiz } from '../../../utils/quizManageApi';
 import { useMessage } from '../../../contexts/MessageContext';
+import { createSession } from '../../../utils/quizRuntimeApi';
+import { getResults } from "../../../utils/quizRuntimeApi";
+import { useEffect } from 'react';
+
 
 function OrganizeQuizPage() {
   const { showMessage } = useMessage();
@@ -13,17 +17,41 @@ function OrganizeQuizPage() {
   const [deletedQuestionIds, setDeletedQuestionIds] = useState([]); // Track deleted question ids for backend
   const [quizLink, setQuizLink] = useState('');
   const [quizStarted, setQuizStarted] = useState(false);
-  const [joinedUsers, setJoinedUsers] = useState([
-    // Example users
-    { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' }
-  ]);
+  const [results, setResults] = useState([]);
+  const [joinedUsers, setJoinedUsers] = useState([]);
+    useEffect(() => {
+    const savedSession = localStorage.getItem("currentSessionId");
+    if (savedSession) {
+      setQuizLink(`${window.location.origin}/quiz/${savedSession}`);
+      setQuizStarted(true);
+    }
+  }, []);
+
 
   const handleQuestionChange = (idx, value) => {
     const updated = [...questions];
     updated[idx].question = value;
     setQuestions(updated);
   };
+
+  const handleTitleChange = async (e) => {
+  const value = e.target.value;
+  setQuizTitle(value);
+
+  // If quiz not yet created, create it now
+  if (!quizId && value.trim() !== "") {
+    try {
+      const quizRes = await createQuiz({ title: value, questions: [] });
+      const qid = quizRes._id || quizRes.id || quizRes.quizId;
+      setQuizId(qid);
+      setQuizLink(`${window.location.origin}/quiz/${qid}`);
+      showMessage("Quiz created successfully!", "success");
+    } catch (err) {
+      showMessage("Failed to create quiz: " + err.message, "error");
+    }
+  }
+};
+
   const handleTypeChange = (idx, value) => {
     const updated = [...questions];
     updated[idx].type = value;
@@ -66,12 +94,15 @@ function OrganizeQuizPage() {
     if (quizId) {
       try {
         // Only send required fields for MCQ
-        const payload = {
-          type: 'mcq',
-          question: '',
-          options: ['', ''],
-          answer: '' // backend may require empty string for MCQ
-        };
+        // backend expects `text` and `correctAnswer` for MCQ
+const payload = {
+  type: 'mcq',
+  text: '',
+  options: ['', ''],
+  correctAnswer: ''
+};
+
+
         const res = await createQuestion(quizId, payload);
         setQuestions([...questions, { ...newQ, id: res.id || res._id || res.questionId }]);
       } catch (err) {
@@ -123,19 +154,24 @@ function OrganizeQuizPage() {
       // 3. Create/update questions
       const updatedQuestions = [];
       for (const q of questions) {
-        let payload = {
-          type: q.type.toLowerCase(),
-          question: q.question
-        };
-        if (q.type === 'MCQ') {
-          payload.options = q.answers;
-          payload.answer = q.answers[q.correct[0]] || '';
-        } else if (q.type === 'MSQ') {
-          payload.options = q.answers;
-          payload.answer = q.correct.map(idx => q.answers[idx]);
-        } else if (q.type === 'Text') {
-          payload.answer = q.correct[0] || '';
-        }
+        // Build payload fields that match server models: `text`, `options`, `correctAnswer` / `correctAnswers`
+// Build payload fields that match backend models
+let payload = {
+  type: q.type.toLowerCase(),
+  text: q.question  // 👈 backend expects "text", not "question"
+};
+
+if (q.type === "MCQ") {
+  payload.options = q.answers;
+  payload.correctAnswer = q.answers[q.correct[0]] || "";
+} else if (q.type === "MSQ") {
+  payload.options = q.answers;
+  payload.correctAnswers = (q.correct || []).map(idx => q.answers[idx]);
+} else if (q.type === "Text") {
+  payload.correctAnswer = q.correct[0] || "";
+}
+
+
         if (q.id) {
           // Update existing
           const res = await updateQuestion(qid, q.id, payload);
@@ -155,16 +191,72 @@ function OrganizeQuizPage() {
     }
   };
   // Generate quiz link by id
-  const generateLink = () => {
-    if (quizId) {
-      setQuizLink(`${window.location.origin}/quiz/${quizId}`);
-    } else {
-      showMessage('Save the quiz first to generate a link.', 'info');
+  const generateLink = async () => {
+  if (!quizId && quizTitle.trim() !== "") {
+    try {
+      const quizRes = await createQuiz({ title: quizTitle, questions: [] });
+      const qid = quizRes._id || quizRes.id || quizRes.quizId;
+      setQuizId(qid);
+      setQuizLink(`${window.location.origin}/quiz/${qid}`);
+      showMessage("Quiz created successfully!", "success");
+      return;
+    } catch (err) {
+      showMessage("Failed to create quiz: " + err.message, "error");
+      return;
     }
-  };
-  const startQuiz = () => {
+  }
+
+  if (quizId) {
+    setQuizLink(`${window.location.origin}/quiz/${quizId}`);
+  } else {
+    showMessage("Enter a quiz title first.", "info");
+  }
+};
+
+const startQuiz = async () => {
+  if (!quizId) {
+    showMessage("Save the quiz before starting.", "info");
+    return;
+  }
+
+  try {
+    // Generate a short random session code
+    const sessionId = Math.random().toString(36).substring(2, 8);
+
+    // Call runtime backend to create session
+    await createSession(sessionId, quizId);
+
+    // Show session link for students
+    setQuizLink(`${window.location.origin}/quiz/${sessionId}`);
     setQuizStarted(true);
-  };
+
+    localStorage.setItem("currentSessionId", sessionId);
+
+    showMessage("Quiz session started!", "success");
+  } catch (err) {
+    console.error("Failed to start quiz:", err);
+    showMessage("Failed to start quiz: " + err.message, "error");
+  }
+};
+
+const fetchResults = async () => {
+  // ✅ Always pull from localStorage, survives refresh
+  const sessionId = localStorage.getItem("currentSessionId");
+  if (!sessionId) {
+    showMessage("No active session found.", "info");
+    return;
+  }
+  try {
+    const res = await getResults(sessionId);
+    setResults(res.results || []);
+  } catch (err) {
+    showMessage("Failed to fetch results: " + err.message, "error");
+  }
+};
+
+
+
+
 
   return (
     <div className="min-h-screen bg-base-100 flex flex-col items-center py-8 px-2">
@@ -172,11 +264,12 @@ function OrganizeQuizPage() {
       {/* Quiz title input */}
       <div className="mb-4">
         <input
-          className="input input-bordered w-full max-w-xl"
-          placeholder="Quiz Title"
-          value={quizTitle}
-          onChange={e => setQuizTitle(e.target.value)}
-        />
+  className="input input-bordered w-full max-w-xl"
+  placeholder="Quiz Title"
+  value={quizTitle}
+  onChange={handleTitleChange}
+/>
+
       </div>
       <div className="w-full max-w-3xl flex flex-col gap-6">
         {questions.map((q, qIdx) => (
@@ -248,29 +341,47 @@ function OrganizeQuizPage() {
             </div>
           </div>
         ))}
-        <button className="btn btn-primary" onClick={addQuestion}>Add Question</button>
+        <button className="btn btn-primary" onClick={() => addQuestion()}>Add Question</button>
         <div className="flex flex-wrap gap-4 mt-4">
-          <button className="btn btn-success" onClick={saveQuiz}>Save Quiz</button>
-    <button className="btn btn-info" onClick={generateLink}>Generate Quiz Link</button>
-    {/* Placeholder for quiz list/selection UI */}
-    {/* <button className="btn btn-outline" onClick={loadQuizList}>Load Existing Quizzes</button> */}
-          <button className="btn btn-accent" onClick={startQuiz}>Start Quiz</button>
-        </div>
+  <button className="btn btn-success" onClick={saveQuiz}>Save Quiz</button>
+  <button className="btn btn-info" onClick={generateLink}>Generate Quiz Link</button>
+  <button className="btn btn-accent" onClick={startQuiz}>Start Quiz</button>
+</div>
+
         {quizLink && (
           <div className="alert alert-info mt-4">Quiz Link: <a href={quizLink} className="link link-primary ml-2" target="_blank" rel="noopener noreferrer">{quizLink}</a></div>
         )}
         {quizStarted && (
-          <div className="card bg-base-200 shadow-md mt-4">
-            <div className="card-body">
-              <h2 className="card-title mb-2">Users Joined</h2>
-              <ul className="list-disc ml-6">
-                {joinedUsers.map(u => (
-                  <li key={u.id}>{u.name}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+  <div className="card bg-base-200 shadow-md mt-4 w-full max-w-3xl">
+    <div className="card-body">
+      <h2 className="card-title mb-2">Users Joined</h2>
+      <ul className="list-disc ml-6">
+        {joinedUsers.map(u => (
+          <li key={u.id}>{u.name}</li>
+        ))}
+      </ul>
+
+      {/* 🔹 New: Fetch Results */}
+      <button className="btn btn-outline btn-sm mt-4" onClick={fetchResults}>
+        Refresh Results
+      </button>
+
+      {results.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-semibold">Submitted Results:</h3>
+          <ul className="list-disc ml-6">
+            {results.map((r, idx) => (
+              <li key={idx}>
+                {r.userId}: {JSON.stringify(r.answers)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

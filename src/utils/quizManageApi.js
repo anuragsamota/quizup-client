@@ -1,62 +1,37 @@
-// src/utils/quizManageApi.js
-// Utility functions for quiz-manage service
+// quizup-client/src/utils/quizManageApi.js
+import axios from "axios";
 
-// Set this to your deployed quiz-manage service URL
 export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE || "http://localhost:8080";
 
 export async function createQuiz({ title, questions }) {
-  const res = await fetch(`${QUIZ_MANAGE_API_BASE}/api/quiz/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, questions }),
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to create quiz");
-  return res.json();
+  const res = await axios.post(`${QUIZ_MANAGE_API_BASE}/api/quiz/`, { title, description: '', questions: questions || [] });
+  return res.data;
 }
 
-// Create a question for a quiz
-export async function createQuestion(quizId, question) {
-  const res = await fetch(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(question),
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to create question");
-  return res.json();
+export async function getAllQuizzes() {
+  const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/`);
+  return res.data;
 }
 
-// Update a question for a quiz
-export async function updateQuestion(quizId, questionId, question) {
-  const res = await fetch(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${questionId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(question),
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to update question");
-  return res.json();
+export async function getQuizById(quizId) {
+  const res = await axios.get(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}`);
+  return res.data;
 }
 
-// Delete a question from a quiz
-export async function deleteQuestion(quizId, questionId) {
-  const res = await fetch(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${questionId}`, {
-    method: "DELETE",
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to delete question");
-  return res.json();
+export async function createQuestion(quizId, payload) {
+  return (await axios.post(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions`, payload)).data;
 }
 
-// Update quiz (e.g., title or questions order)
-export async function updateQuiz(quizId, data) {
-  const res = await fetch(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    mode: "cors",
-  });
-  if (!res.ok) throw new Error((await res.json()).message || "Failed to update quiz");
-  return res.json();
+export async function updateQuestion(quizId, qid, payload) {
+  return (await axios.put(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${qid}`, payload)).data;
+}
+
+export async function deleteQuestion(quizId, qid) {
+  return (await axios.delete(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}/questions/${qid}`)).data;
+}
+
+
+export async function updateQuiz(quizId, payload) {
+  const res = await axios.put(`${QUIZ_MANAGE_API_BASE}/api/quiz/${quizId}`, payload);
+  return res.data;
 }
