@@ -30,6 +30,8 @@ function ManageQuizPage() {
         setQuiz(quizData);
         console.log('Quiz metadata loaded:', quizData);
         console.log('Raw questions data:', questionsData); // Debug log to see structure
+        console.log('Raw questions data type:', typeof questionsData);
+        console.log('Raw questions data is array:', Array.isArray(questionsData));
         
         // Handle different response structures for questions
         let questionsArray = [];
@@ -41,17 +43,27 @@ function ManageQuizPage() {
           questionsArray = questionsData.data;
         }
         
-        console.log('Processed questions array:', questionsArray); // Debug log
+        // Log each individual question for detailed inspection
+        questionsArray.forEach((q, index) => {
+          console.log(`Question ${index + 1}:`, q);
+          console.log(`  - ID: ${q._id || q.id}`);
+          console.log(`  - Text: ${q.text || q.question}`);
+          console.log(`  - Type: ${q.type}`);
+          console.log(`  - Options: ${JSON.stringify(q.options)}`);
+          console.log(`  - CorrectAnswer: ${JSON.stringify(q.correctAnswer)}`);
+          console.log(`  - CorrectAnswers: ${JSON.stringify(q.correctAnswers)}`); // Check for MSQ field
+          console.log(`  - Explanation: ${q.explanation}`);
+        });
         
         // Map backend question format to frontend format
-        const mappedQuestions = questionsArray.map(q => {
+        const mappedQuestions = questionsArray.map((q, index) => {
           console.log('Backend question:', q); // Debug log
           console.log('Question text field:', q.text);
           console.log('Question question field:', q.question);
           console.log('Question _id:', q._id);
           console.log('Question id:', q.id);
           
-          return {
+          const mappedQuestion = {
             id: q._id || q.id,
             question: q.text || q.question || q._id || '', // Fallback to _id if no text
             type: q.type ? q.type.toUpperCase() : 'MCQ', // Ensure uppercase type
@@ -59,6 +71,15 @@ function ManageQuizPage() {
             correct: mapCorrectAnswers(q), // Map correct answers based on type
             explanation: q.explanation || '' // Map explanation field
           };
+          
+          console.log(`Final mapped question ${index + 1}:`, mappedQuestion);
+          console.log(`  - Question: "${mappedQuestion.question}"`);
+          console.log(`  - Type: ${mappedQuestion.type}`);
+          console.log(`  - Answers: [${mappedQuestion.answers.join(', ')}]`);
+          console.log(`  - Correct indexes: [${mappedQuestion.correct.join(', ')}]`);
+          console.log(`  - Correct options: [${mappedQuestion.correct.map(idx => mappedQuestion.answers[idx]).join(', ')}]`);
+          
+          return mappedQuestion;
         });
         
         setQuestions(mappedQuestions);
@@ -76,26 +97,92 @@ function ManageQuizPage() {
   const mapCorrectAnswers = (backendQuestion) => {
     const type = backendQuestion.type ? backendQuestion.type.toUpperCase() : 'MCQ';
     const correctAnswer = backendQuestion.correctAnswer;
+    const correctAnswers = backendQuestion.correctAnswers; // MSQ might use plural field
     const options = backendQuestion.options || [];
 
+    console.log(`Mapping correctAnswer for ${type}:`, correctAnswer, typeof correctAnswer);
+    console.log(`Mapping correctAnswers for ${type}:`, correctAnswers, typeof correctAnswers);
+    
+    // For MSQ, check both correctAnswer and correctAnswers fields
+    const correctData = type === 'MSQ' ? (correctAnswers || correctAnswer) : correctAnswer;
+    console.log(`Using correctData for ${type}:`, correctData, typeof correctData);
+    
+    if (Array.isArray(correctData)) {
+      console.log('CorrectData is array, items:', correctData.map(item => `${item} (${typeof item})`));
+    }
+
     if (type === 'MCQ') {
-      // Find the index of the correct answer in options
-      const correctIndex = options.findIndex(option => option === correctAnswer);
-      return correctIndex >= 0 ? [correctIndex] : [0];
-    } else if (type === 'MSQ') {
-      // For MSQ, correctAnswer should be an array
-      if (Array.isArray(correctAnswer)) {
-        return correctAnswer.map(answer => {
-          const index = options.findIndex(option => option === answer);
-          return index >= 0 ? index : 0;
-        }).filter((index, pos, arr) => arr.indexOf(index) === pos); // Remove duplicates
-      } else {
-        const correctIndex = options.findIndex(option => option === correctAnswer);
-        return correctIndex >= 0 ? [correctIndex] : [];
+      // Backend now sends array of indexes for MCQ
+      if (Array.isArray(correctData)) {
+        // Parse string indexes to numbers if needed
+        const parsed = correctData.map(item => {
+          if (typeof item === 'number') return item;
+          if (typeof item === 'string' && !isNaN(item)) return parseInt(item, 10);
+          return item;
+        }).filter(index => typeof index === 'number' && index >= 0 && index < options.length);
+        console.log(`MCQ parsed indexes:`, parsed);
+        return parsed;
+      } else if (typeof correctData === 'number') {
+        console.log(`MCQ single number:`, [correctData]);
+        return [correctData];
+      } else if (typeof correctData === 'string') {
+        // Check if it's a string index or option text
+        if (!isNaN(correctData)) {
+          const index = parseInt(correctData, 10);
+          const result = index >= 0 && index < options.length ? [index] : [0];
+          console.log(`MCQ parsed string index "${correctData}":`, result);
+          return result;
+        } else {
+          // Fallback: if still sending option text, find index
+          const correctIndex = options.findIndex(option => option === correctData);
+          const result = correctIndex >= 0 ? [correctIndex] : [0];
+          console.log(`MCQ option text "${correctData}" mapped to:`, result);
+          return result;
+        }
       }
+      console.log(`MCQ default fallback:`, [0]);
+      return [0]; // Default fallback
+    } else if (type === 'MSQ') {
+      // For MSQ, correctData should be an array of indexes
+      if (Array.isArray(correctData)) {
+        // Check if it's array of indexes (numbers) or array of string indexes or option texts
+        if (correctData.every(item => typeof item === 'number')) {
+          const result = correctData.filter(index => index >= 0 && index < options.length);
+          console.log(`MSQ number indexes:`, result);
+          return result;
+        } else if (correctData.every(item => typeof item === 'string' && !isNaN(item))) {
+          // Parse string indexes to numbers
+          const parsed = correctData.map(item => parseInt(item, 10)).filter(index => index >= 0 && index < options.length);
+          console.log(`MSQ parsed string indexes from [${correctData.join(', ')}]:`, parsed);
+          return parsed;
+        } else {
+          // Convert option texts to indexes
+          const mapped = correctData.map(answer => {
+            const index = options.findIndex(option => option === answer);
+            return index >= 0 ? index : 0;
+          }).filter((index, pos, arr) => arr.indexOf(index) === pos); // Remove duplicates
+          console.log(`MSQ option texts [${correctData.join(', ')}] mapped to:`, mapped);
+          return mapped;
+        }
+      } else if (typeof correctData === 'string') {
+        // Check if it's a string index or option text
+        if (!isNaN(correctData)) {
+          const index = parseInt(correctData, 10);
+          const result = index >= 0 && index < options.length ? [index] : [];
+          console.log(`MSQ single string index "${correctData}":`, result);
+          return result;
+        } else {
+          const correctIndex = options.findIndex(option => option === correctData);
+          const result = correctIndex >= 0 ? [correctIndex] : [];
+          console.log(`MSQ single option text "${correctData}" mapped to:`, result);
+          return result;
+        }
+      }
+      console.log(`MSQ default fallback:`, []);
+      return []; // Default fallback for MSQ
     } else if (type === 'TEXT') {
       // For text questions, store the correct answer as string
-      return [correctAnswer || ''];
+      return [correctData || ''];
     }
     
     return [0]; // Default fallback
@@ -183,7 +270,7 @@ function ManageQuizPage() {
         return;
       }
       payload.options = q.answers.filter(ans => ans.trim() !== '');
-      payload.correctAnswer = q.answers[q.correct[0]] || ''; // Changed from 'answer' to 'correctAnswer'
+      payload.correctAnswer = q.correct; // Send array of indexes for MCQ
     } else if (q.type === 'MSQ') {
       // Validate MSQ has options and correct answers
       if (!q.answers || q.answers.length < 2) {
@@ -195,7 +282,7 @@ function ManageQuizPage() {
         return;
       }
       payload.options = q.answers.filter(ans => ans.trim() !== '');
-      payload.correctAnswer = q.correct.map(i => q.answers[i]).filter(ans => ans && ans.trim()); // Changed from 'answer' to 'correctAnswer'
+      payload.correctAnswers = q.correct; // Send array of indexes for MSQ
     } else if (q.type === 'Text') {
       payload.correctAnswer = (q.correct && q.correct[0]) ? q.correct[0].trim() : ''; // Changed from 'answer' to 'correctAnswer'
     }

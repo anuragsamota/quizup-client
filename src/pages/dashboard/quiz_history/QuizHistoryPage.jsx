@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { fetchUserHistory, fetchOrganizedQuizzes } from '../../../utils/userApi';
+import { fetchUserHistory} from '../../../utils/userApi';
+import { getQuizzesByOrganizer } from '../../../utils/quizManageApi';
 
 function QuizHistoryPage() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function QuizHistoryPage() {
       if (!token) return;
       setOrgLoading(true);
       try {
-        const data = await fetchOrganizedQuizzes(token);
+        const data = await getQuizzesByOrganizer(token);
         setOrganizedQuizzes(data);
         setOrgError(null);
       } catch (err) {
@@ -100,8 +101,7 @@ function QuizHistoryPage() {
                 <thead>
                   <tr>
                     <th>Title</th>
-                    <th>Participants</th>
-                    <th>Date</th>
+                    <th>Date Created</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,7 +112,6 @@ function QuizHistoryPage() {
                       onClick={() => navigate(`/dashboard/quiz-history/organized/${q._id || q.id || ''}`)}
                     >
                       <td className="text-primary underline">{q.title}</td>
-                      <td>{q.participants ?? '-'}</td>
                       <td>{q.createdAt ? new Date(q.createdAt).toLocaleDateString() : ''}</td>
                     </tr>
                   ))}

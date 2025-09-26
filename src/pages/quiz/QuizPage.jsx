@@ -172,8 +172,7 @@ function QuizPage() {
     setLoading(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!joined) {
       showMessage('Please join the quiz first', 'error');
       return;
@@ -273,7 +272,7 @@ function QuizPage() {
                 ></div>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form>
                 <div className="mb-8">
                   <div className="text-lg font-semibold mb-4">{q.text}</div>
 
@@ -313,14 +312,6 @@ function QuizPage() {
                       disabled={loading}
                     />
                   )}
-
-                  {/* Show explanation if available */}
-                  {q.explanation && (
-                    <div className="mt-4 p-4 bg-info/20 rounded-lg">
-                      <div className="text-sm font-semibold mb-1">Explanation:</div>
-                      <div className="text-sm text-base-content/80">{q.explanation}</div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -344,8 +335,9 @@ function QuizPage() {
                     </button>
                   ) : (
                     <button 
-                      type="submit" 
+                      type="button" 
                       className="btn btn-success"
+                      onClick={handleSubmit}
                       disabled={loading || submitted}
                     >
                       {loading ? 'Submitting...' : submitted ? 'Submitted!' : 'Submit Quiz'}

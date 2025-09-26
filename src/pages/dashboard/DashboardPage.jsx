@@ -105,7 +105,6 @@ function DashboardHome() {
                   <thead>
                     <tr>
                       <th>Title</th>
-                      <th>Participants</th>
                       <th>Date</th>
                     </tr>
                   </thead>
@@ -113,7 +112,6 @@ function DashboardHome() {
                     {recentOrganized.map((q, i) => (
                       <tr key={q._id || i}>
                         <td>{q.title}</td>
-                        <td>{q.participants ?? '-'}</td>
                         <td>{q.createdAt ? new Date(q.createdAt).toLocaleDateString() : ''}</td>
                       </tr>
                     ))}

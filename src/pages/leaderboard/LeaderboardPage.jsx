@@ -4,11 +4,10 @@ import React from 'react';
 
 // Example leaderboard data (replace with real fetch later)
 const leaderboardData = [
-  { rank: 1, name: 'Alice', score: 95, user: false },
-  { rank: 2, name: 'Bob', score: 90, user: false },
-  { rank: 3, name: 'You', score: 88, user: true },
-  { rank: 4, name: 'Charlie', score: 80, user: false },
-  { rank: 5, name: 'David', score: 75, user: false },
+  { rank: 1, name: 'You', score: 100, user: true },
+  { rank: 2, name: 'Shubham Jindal', score: 95, user: false },
+  { rank: 3, name: 'Abhishek Ghelot', score: 90, user: false },
+  { rank: 4, name: 'Nikihil Soni', score: 80, user: false },
 ];
 
 function LeaderboardPage() {
