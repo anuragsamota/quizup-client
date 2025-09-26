@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.svg" alt="QuizUp Logo" width="120" height="120">
+  <img src="https://raw.githubusercontent.com/anuragsamota/quizup-client/refs/heads/main/public/logo.svg" alt="QuizUp Logo" width="120" height="120">
   
   # QuizUp🎯
   
