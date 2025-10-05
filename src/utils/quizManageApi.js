@@ -2,7 +2,9 @@
 import axios from "axios";
 
 // export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE || "http://localhost:8080";
-export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE;
+export const QUIZ_MANAGE_API_BASE = "https://quizup-quiz-manage-service.vercel.app";
+
+
 
 export async function createQuiz({ title, questions, organizer }) {
   const payload = { 

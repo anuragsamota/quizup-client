@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // const BASE = import.meta.env.VITE_QUIZ_RUNTIME_API_BASE || "http://localhost:5642";
-const BASE = import.meta.env.VITE_QUIZ_RUNTIME_API_BASE;
+const BASE = "https://quizup-quiz-runtime-service.vercel.app";
 
 // Create a runtime session (teacher starts quiz)
 export async function createSession(sessionId, quizId) {

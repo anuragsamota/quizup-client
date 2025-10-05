@@ -4,9 +4,10 @@
 import axios from "axios";
 
 // const API_BASE = import.meta.env.USER_API || "http://localhost:8080";
-const API_BASE = import.meta.env.USER_API;
+const API_BASE = "https://quizup-user-manage-service.vercel.app";
 
 export async function loginUser({ username, password }) {
+  console.log("API_BASE:", API_BASE);
   try {
     const res = await axios.post(`${API_BASE}/api/login`, {
       username,
