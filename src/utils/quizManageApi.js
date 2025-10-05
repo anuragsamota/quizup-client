@@ -1,7 +1,8 @@
 // quizup-client/src/utils/quizManageApi.js
 import axios from "axios";
 
-export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE || "http://localhost:8080";
+// export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE || "http://localhost:8080";
+export const QUIZ_MANAGE_API_BASE = import.meta.env.VITE_QUIZ_MANAGE_API_BASE;
 
 export async function createQuiz({ title, questions, organizer }) {
   const payload = { 
