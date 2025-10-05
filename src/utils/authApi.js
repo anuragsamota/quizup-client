@@ -3,7 +3,8 @@
 
 import axios from "axios";
 
-const API_BASE = import.meta.env.USER_API || "http://localhost:8080";
+// const API_BASE = import.meta.env.USER_API || "http://localhost:8080";
+const API_BASE = import.meta.env.USER_API;
 
 export async function loginUser({ username, password }) {
   try {
