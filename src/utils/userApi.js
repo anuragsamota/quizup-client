@@ -3,7 +3,8 @@ import axios from "axios";
 // src/utils/userApi.js
 // Utility functions for user profile and user data
 
-const USER_API_BASE = import.meta.env.USER_API || "http://localhost:8080";
+// const USER_API_BASE = import.meta.env.USER_API || "http://localhost:8080";
+const USER_API_BASE = import.meta.env.USER_API;
 
 export async function fetchUserProfile(token) {
   try {
